@@ -13,20 +13,6 @@ access_key = os.getenv("UPBIT_ACCESS_KEY")
 secret_key = os.getenv("UPBIT_SECRET_KEY")
 upbit = pyupbit.Upbit(access_key, secret_key)
 
-def get_total_krw_value():
-    """사용자의 전체 자산 중 원화(KRW) 및 각 코인의 현재 원화 가치를 합산하여 총 원화 가치를 계산합니다."""
-    total_krw_value = 0
-    balances = upbit.get_balances()
-    for balance in balances:
-        if balance['currency'] == "KRW":
-            total_krw_value += float(balance['balance'])
-        else:
-            ticker = f"KRW-{balance['currency']}"
-            current_price = pyupbit.get_current_price(ticker)
-            if current_price:
-                total_krw_value += current_price * float(balance['balance'])
-    return total_krw_value
-
 def fetch_data(coin):
     # 10분 간격 데이터
     df = pyupbit.get_ohlcv(f"KRW-{coin}", interval="minute10", count=120)
@@ -60,10 +46,34 @@ def decide_action(df, coin):
 
     return decision, decision_reason
 
-def execute_trade(decision, decision_reason, coin, total_krw_value, num_coins=2):
-    """전체 KRW 가치를 기반으로 투자할 금액을 계산하고 거래를 실행합니다."""
+def execute_trade(decision, decision_reason, coin):
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
     try:
-        max_investment_per_coin = total_krw_value / num_coins
+        if decision == "buy":
+            krw_balance = upbit.get_balance("KRW")
+            if krw_balance > 5000:  # 최소 거래 금액 조건 확인
+                response = upbit.buy_market_order(f"KRW-{coin}", krw_balance * 0.9995)  # 수수료 고려
+                print(f"Buy order executed: {response}")
+        elif decision == "sell":
+            coin_balance = float(upbit.get_balance(coin))
+            if coin_balance > 0.00008:  # 최소 거래 단위 조건 확인
+                response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
+                print(f"Sell order executed: {response}")
     except Exception as e:
         print(f"Error executing trade: {e}")
+
+def main():
+    print(f"{datetime.now()} - Running main function.")
+    for coin in ["BTC", "BORA"]:
+        df = fetch_data(coin)
+        decision, decision_reason = decide_action(df, coin)
+        execute_trade(decision, decision_reason, coin)
+
+# 스케줄 설정 및 실행
+schedule.every(10).minutes.do(main)
+
+if __name__ == "__main__":
+    main()  # 최초 실행
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
