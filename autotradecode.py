@@ -27,20 +27,24 @@ def decide_action(df, coin):
     last_row = df.iloc[-1]
     decision_reason = ""
 
-    # 매수 조건: SMA_20 > SMA_60 > SMA_120 및 현재 거래량이 평균 거래량보다 높음
-    if (last_row['SMA_20'] > last_row['SMA_60'] > last_row['SMA_120']) and (last_row['volume'] > last_row['Volume_MA']):
+    # 양봉 확인: 종가 > 시가
+    is_bullish_candle = last_row['close'] > last_row['open']
+    # 거래량 증가 추세 확인: 현재 거래량 > 20기간 거래량 이동 평균
+    volume_increasing_trend = last_row['volume'] > last_row['Volume_MA']
+
+    if (last_row['SMA_20'] > last_row['SMA_60'] > last_row['SMA_120'] and 
+        volume_increasing_trend and 
+        is_bullish_candle):
         decision = "buy"
-        decision_reason = f"{coin}: SMA_20 > SMA_60 > SMA_120 and current volume is higher than average volume."
-    # 매도 조건: SMA_20이 SMA_60 또는 SMA_120보다 낮음
-    elif (last_row['SMA_20'] < last_row['SMA_60']) or (last_row['SMA_20'] < last_row['SMA_120']):
+        decision_reason = f"{coin}: SMA_20 > SMA_60 > SMA_120, 거래량 증가 추세 및 양봉 확인."
+    elif last_row['SMA_20'] < last_row['SMA_60'] or last_row['SMA_20'] < last_row['SMA_120']:
         decision = "sell"
-        decision_reason = f"{coin}: SMA_20 is lower than either SMA_60 or SMA_120."
+        decision_reason = f"{coin}: SMA_20이 SMA_60 또는 SMA_120보다 낮습니다."
     else:
         decision = "hold"
-        decision_reason = f"{coin}: Current conditions do not meet buy or sell criteria."
+        decision_reason = f"{coin}: 매수 또는 매도 조건에 해당하지 않습니다."
 
     return decision, decision_reason
-
 
 def execute_trade(decision, decision_reason, coin):
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
