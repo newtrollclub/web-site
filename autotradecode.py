@@ -26,16 +26,21 @@ def fetch_data(coin):
 def decide_action(df, coin):
     last_row = df.iloc[-1]
     decision_reason = ""
-    if last_row['SMA_20'] > last_row['SMA_60'] > last_row['SMA_120'] and last_row['volume'] > df['volume'].mean():
+
+    # 매수 조건: SMA_20 > SMA_60 > SMA_120 및 현재 거래량이 평균 거래량보다 높음
+    if (last_row['SMA_20'] > last_row['SMA_60'] > last_row['SMA_120']) and (last_row['volume'] > last_row['Volume_MA']):
         decision = "buy"
-        decision_reason = f"{coin}: SMA_20 > SMA_60 > SMA_120 and have more current volume than average volume."
-    elif last_row['SMA_20'] < last_row['SMA_60'] or last_row['SMA_20'] < last_row['SMA_120']:
+        decision_reason = f"{coin}: SMA_20 > SMA_60 > SMA_120 and current volume is higher than average volume."
+    # 매도 조건: SMA_20이 SMA_60 또는 SMA_120보다 낮음
+    elif (last_row['SMA_20'] < last_row['SMA_60']) or (last_row['SMA_20'] < last_row['SMA_120']):
         decision = "sell"
-        decision_reason = f"{coin}: SMA_20 is lower than SMA_60 or SMA_120."
+        decision_reason = f"{coin}: SMA_20 is lower than either SMA_60 or SMA_120."
     else:
         decision = "hold"
         decision_reason = f"{coin}: Current conditions do not meet buy or sell criteria."
+
     return decision, decision_reason
+
 
 def execute_trade(decision, decision_reason, coin):
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
