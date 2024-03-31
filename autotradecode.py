@@ -69,7 +69,8 @@ def execute_trade(decision, decision_reason, coin, total_krw_value, num_coins=2)
                 print(f"Buy order executed: {response}")
         elif decision == "sell":
             coin_balance = float(upbit.get_balance(coin))
-            if coin_balance * pyupbit.get_current_price(f"KRW-{coin}") > 5000:  # 최소 거래 가치 조건 확인
+            current_price = pyupbit.get_current_price(f"KRW-{coin}")
+            if coin_balance * current_price > 5000:  # 최소 거래 가치 조건 확인
                 response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
                 print(f"Sell order executed: {response}")
     except Exception as e:
@@ -78,10 +79,11 @@ def execute_trade(decision, decision_reason, coin, total_krw_value, num_coins=2)
 def main():
     print(f"{datetime.now()} - Running main function.")
     total_krw_value = get_total_krw_value()  # 전체 KRW 가치 계산
+    num_coins = len(["BTC", "BORA"])  # 코인 종류의 수
     for coin in ["BTC", "BORA"]:
         df = fetch_data(coin)
         decision, decision_reason = decide_action(df, coin)
-        execute_trade(decision, decision_reason, coin, total_krw_value)
+        execute_trade(decision, decision_reason, coin, total_krw_value, num_coins)
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
