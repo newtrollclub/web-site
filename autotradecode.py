@@ -13,19 +13,19 @@ access_key = os.getenv("UPBIT_ACCESS_KEY")
 secret_key = os.getenv("UPBIT_SECRET_KEY")
 upbit = pyupbit.Upbit(access_key, secret_key)
 
-def get_total_krw_value():
-    """사용자의 전체 자산 중 원화(KRW) 및 각 코인의 현재 원화 가치를 합산하여 총 원화 가치를 계산합니다."""
-    total_krw_value = 0
+def get_total_assets():
+    """사용자의 총 자산을 계산합니다."""
+    total_assets = 0
     balances = upbit.get_balances()
     for balance in balances:
         if balance['currency'] == "KRW":
-            total_krw_value += float(balance['balance'])
+            total_assets += float(balance['balance'])
         else:
             ticker = f"KRW-{balance['currency']}"
             current_price = pyupbit.get_current_price(ticker)
             if current_price:
-                total_krw_value += current_price * float(balance['balance'])
-    return total_krw_value
+                total_assets += current_price * float(balance['balance'])
+    return total_assets
 
 def fetch_data(coin):
     """10분 간격 데이터를 받아와서 기술적 지표를 계산합니다."""
@@ -56,21 +56,22 @@ def decide_action(df, coin):
 
     return decision, decision_reason
 
-def execute_trade(decision, decision_reason, coin, total_krw_value, num_coins=2):
+def execute_trade(decision, decision_reason, coin, total_assets):
     """매수 또는 매도 결정을 실행합니다."""
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
-    max_investment_per_coin = total_krw_value / num_coins
     try:
         if decision == "buy":
             krw_balance = upbit.get_balance("KRW")
-            investment_amount = min(krw_balance, max_investment_per_coin)
+            coin_balance = upbit.get_balance(coin)
+            available_krw = krw_balance + (coin_balance * pyupbit.get_current_price(f"KRW-{coin}"))
+            investment_ratio = available_krw / total_assets
+            investment_amount = min(available_krw * investment_ratio, krw_balance)  # 사용 가능한 현금으로 한도 설정
             if investment_amount > 5000:  # 최소 거래 금액 조건 확인
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
                 print(f"Buy order executed: {response}")
         elif decision == "sell":
-            coin_balance = float(upbit.get_balance(coin))
-            current_price = pyupbit.get_current_price(f"KRW-{coin}")
-            if coin_balance * current_price > 5000:  # 최소 거래 가치 조건 확인
+            coin_balance = upbit.get_balance(coin)
+            if coin_balance * pyupbit.get_current_price(f"KRW-{coin}") > 5000:  # 최소 거래 가치 조건 확인
                 response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
                 print(f"Sell order executed: {response}")
     except Exception as e:
@@ -78,12 +79,11 @@ def execute_trade(decision, decision_reason, coin, total_krw_value, num_coins=2)
 
 def main():
     print(f"{datetime.now()} - Running main function.")
-    total_krw_value = get_total_krw_value()  # 전체 KRW 가치 계산
-    num_coins = len(["BTC", "BORA"])  # 코인 종류의 수
+    total_assets = get_total_assets()  # 총 자산 계산
     for coin in ["BTC", "BORA"]:
         df = fetch_data(coin)
         decision, decision_reason = decide_action(df, coin)
-        execute_trade(decision, decision_reason, coin, total_krw_value, num_coins)
+        execute_trade(decision, decision_reason, coin, total_assets)
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
