@@ -56,26 +56,42 @@ def decide_action(df, coin):
 
     return decision, decision_reason
 
-def execute_trade(decision, decision_reason, coin, total_assets):
+def execute_trade(decision, decision_reason, coin, total_krw_value, num_coins):
     """매수 또는 매도 결정을 실행합니다."""
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
     try:
         if decision == "buy":
+            total_asset_value = get_total_asset_value()  # 보유 자산의 총 가치 계산
             krw_balance = upbit.get_balance("KRW")
-            coin_balance = upbit.get_balance(coin)
-            available_krw = krw_balance + (coin_balance * pyupbit.get_current_price(f"KRW-{coin}"))
-            investment_ratio = available_krw / total_assets
-            investment_amount = min(available_krw * investment_ratio, krw_balance)  # 사용 가능한 현금으로 한도 설정
+            total_investment_amount = total_asset_value / 2  # 총 자산의 절반을 매수
+            investment_amount_per_coin = total_investment_amount / num_coins
+            investment_amount = min(investment_amount_per_coin, krw_balance)
             if investment_amount > 5000:  # 최소 거래 금액 조건 확인
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
                 print(f"Buy order executed: {response}")
         elif decision == "sell":
-            coin_balance = upbit.get_balance(coin)
-            if coin_balance * pyupbit.get_current_price(f"KRW-{coin}") > 5000:  # 최소 거래 가치 조건 확인
+            coin_balance = float(upbit.get_balance(coin))
+            current_price = pyupbit.get_current_price(f"KRW-{coin}")
+            if coin_balance * current_price > 5000:  # 최소 거래 가치 조건 확인
                 response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
                 print(f"Sell order executed: {response}")
     except Exception as e:
         print(f"Error executing trade: {e}")
+
+def get_total_asset_value():
+    """사용자의 전체 자산의 가치를 계산합니다."""
+    total_asset_value = 0
+    balances = upbit.get_balances()
+    for balance in balances:
+        if balance['currency'] == "KRW":
+            total_asset_value += float(balance['balance'])
+        else:
+            ticker = f"KRW-{balance['currency']}"
+            current_price = pyupbit.get_current_price(ticker)
+            if current_price:
+                total_asset_value += current_price * float(balance['balance'])
+    return total_asset_value
+
 
 def main():
     print(f"{datetime.now()} - Running main function.")
