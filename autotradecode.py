@@ -56,7 +56,7 @@ def decide_action(df, coin):
 
     return decision, decision_reason
 
-def execute_trade(decision, decision_reason, coin, total_krw_value, num_coins):
+def execute_trade(decision, decision_reason, coin, total_assets, num_coins):
     """매수 또는 매도 결정을 실행합니다."""
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
     try:
@@ -96,10 +96,11 @@ def get_total_asset_value():
 def main():
     print(f"{datetime.now()} - Running main function.")
     total_assets = get_total_assets()  # 총 자산 계산
+    num_coins = len(["BTC", "BORA"])  # 코인 종류의 수
     for coin in ["BTC", "BORA"]:
         df = fetch_data(coin)
         decision, decision_reason = decide_action(df, coin)
-        execute_trade(decision, decision_reason, coin, total_assets)
+        execute_trade(decision, decision_reason, coin, total_assets, num_coins)
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
