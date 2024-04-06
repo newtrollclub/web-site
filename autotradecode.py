@@ -56,16 +56,16 @@ def decide_action(df, coin):
 
     return decision, decision_reason
 
-def execute_trade(decision, decision_reason, coin, total_assets, num_coins):
+def execute_trade(decision, decision_reason, coin, total_assets):
     """매수 또는 매도 결정을 실행합니다."""
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
     try:
         if decision == "buy":
-            total_asset_value = get_total_asset_value()  # 보유 자산의 총 가치 계산
             krw_balance = upbit.get_balance("KRW")
-            total_investment_amount = total_asset_value / 2  # 총 자산의 절반을 매수
-            investment_amount_per_coin = total_investment_amount / num_coins
-            investment_amount = min(investment_amount_per_coin, krw_balance)
+            if krw_balance > total_assets / 2:  # 보유 자산의 절반 이상이면 매수하지 않음
+                print("보유 자산의 절반 이상이므로 매수하지 않습니다.")
+                return
+            investment_amount = min(krw_balance, total_assets / 2)  # 남아 있는 현금과 코인 포함 자산의 절반을 매수
             if investment_amount > 5000:  # 최소 거래 금액 조건 확인
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
                 print(f"Buy order executed: {response}")
@@ -78,29 +78,13 @@ def execute_trade(decision, decision_reason, coin, total_assets, num_coins):
     except Exception as e:
         print(f"Error executing trade: {e}")
 
-def get_total_asset_value():
-    """사용자의 전체 자산의 가치를 계산합니다."""
-    total_asset_value = 0
-    balances = upbit.get_balances()
-    for balance in balances:
-        if balance['currency'] == "KRW":
-            total_asset_value += float(balance['balance'])
-        else:
-            ticker = f"KRW-{balance['currency']}"
-            current_price = pyupbit.get_current_price(ticker)
-            if current_price:
-                total_asset_value += current_price * float(balance['balance'])
-    return total_asset_value
-
-
 def main():
     print(f"{datetime.now()} - Running main function.")
     total_assets = get_total_assets()  # 총 자산 계산
-    num_coins = len(["BTC", "BORA"])  # 코인 종류의 수
     for coin in ["BTC", "BORA"]:
         df = fetch_data(coin)
         decision, decision_reason = decide_action(df, coin)
-        execute_trade(decision, decision_reason, coin, total_assets, num_coins)
+        execute_trade(decision, decision_reason, coin, total_assets)
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
@@ -110,3 +94,4 @@ if __name__ == "__main__":
     while True:
         schedule.run_pending()
         time.sleep(1)
+                     
