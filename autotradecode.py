@@ -37,19 +37,6 @@ def select_coins():
     # 여기에 추가 로그
     print(f"After selecting coins: {selected_coins}")
 
-def get_total_assets():
-    """사용자의 총 자산을 계산합니다."""
-    total_assets = 0
-    balances = upbit.get_balances()
-    for balance in balances:
-        if balance['currency'] == "KRW":
-            total_assets += float(balance['balance'])
-        else:
-            ticker = f"KRW-{balance['currency']}"
-            current_price = pyupbit.get_current_price(ticker)
-            total_assets += current_price * float(balance['balance'])
-    return total_assets
-
 def fetch_data(coin):
     """10분 간격 데이터를 받아와서 기술적 지표를 계산합니다."""
     try:
@@ -87,26 +74,6 @@ def decide_action(df, coin):
 
     return decision, decision_reason
 
-def execute_trade(decision, decision_reason, coin):
-    """매수 또는 매도 결정을 실행합니다."""
-    print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
-    try:
-        if decision == "buy" and coin in selected_coins:
-            total_assets = get_total_assets()
-            krw_balance = upbit.get_balance("KRW")  # 사용 가능한 KRW 잔액
-            investment_amount = min(krw_balance, total_assets / 2)
-
-            if investment_amount > 5000:  # 최소 거래 금액 조건 확인
-                response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
-                print(f"Buy order executed for {coin}: {response}")
-        elif decision == "sell":
-            coin_balance = float(upbit.get_balance(coin))
-            if coin_balance > 0:  # 보유한 코인이 있는지 확인
-                response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
-                print(f"Sell order executed for {coin}: {response}")
-    except Exception as e:
-        print(f"Error executing trade for {coin}: {e}")
-
 def main():
     print(f"{datetime.now()} - Running main function.")
     if not selected_coins:
@@ -120,7 +87,6 @@ def main():
             continue
         decision, decision_reason = decide_action(df, coin)
         print(f"Decision: {decision}, Reason: {decision_reason}")
-        execute_trade(decision, decision_reason, coin)
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
