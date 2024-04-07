@@ -61,10 +61,17 @@ def execute_trade(decision, decision_reason, coin):
     try:
         if decision == "buy":
             total_assets = get_total_assets()
-            krw_balance = upbit.get_balance("KRW")
-            # 전체 자산의 절반까지만 매수
-            investment_amount = min(krw_balance, total_assets / 2)
-            
+            krw_balance = upbit.get_balance("KRW")  # 사용 가능한 KRW 잔액
+            coin_balance = upbit.get_balance(coin)  # 해당 코인의 현재 보유량
+            current_price = pyupbit.get_current_price(f"KRW-{coin}")  # 해당 코인의 현재 가격
+
+            # 이미 보유한 코인의 가치 계산
+            coin_value = coin_balance * current_price if coin_balance else 0
+
+            # 추가로 매수 가능한 최대 금액 계산
+            max_additional_buy = total_assets / 2 - coin_value
+            investment_amount = min(krw_balance, max_additional_buy)
+
             if investment_amount > 5000:  # 최소 거래 금액 조건 확인
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
                 print(f"Buy order executed for {coin}: {response}")
@@ -75,6 +82,7 @@ def execute_trade(decision, decision_reason, coin):
                 print(f"Sell order executed for {coin}: {response}")
     except Exception as e:
         print(f"Error executing trade for {coin}: {e}")
+
 
 def main():
     print(f"{datetime.now()} - Running main function.")
