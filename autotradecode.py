@@ -23,8 +23,7 @@ def get_total_assets():
         else:
             ticker = f"KRW-{balance['currency']}"
             current_price = pyupbit.get_current_price(ticker)
-            if current_price:
-                total_assets += current_price * float(balance['balance'])
+            total_assets += current_price * float(balance['balance'])
     return total_assets
 
 def fetch_data(coin):
@@ -56,35 +55,33 @@ def decide_action(df, coin):
 
     return decision, decision_reason
 
-def execute_trade(decision, decision_reason, coin, total_assets):
+def execute_trade(decision, decision_reason, coin):
     """매수 또는 매도 결정을 실행합니다."""
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
     try:
         if decision == "buy":
+            total_assets = get_total_assets()
             krw_balance = upbit.get_balance("KRW")
-            if krw_balance > total_assets / 2:  # 보유 자산의 절반 이상이면 매수하지 않음
-                print("보유 자산의 절반 이상이므로 매수하지 않습니다.")
-                return
-            investment_amount = min(krw_balance, total_assets / 2)  # 남아 있는 현금과 코인 포함 자산의 절반을 매수
+            # 전체 자산의 절반까지만 매수
+            investment_amount = min(krw_balance, total_assets / 2)
+            
             if investment_amount > 5000:  # 최소 거래 금액 조건 확인
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
-                print(f"Buy order executed: {response}")
+                print(f"Buy order executed for {coin}: {response}")
         elif decision == "sell":
             coin_balance = float(upbit.get_balance(coin))
-            current_price = pyupbit.get_current_price(f"KRW-{coin}")
-            if coin_balance * current_price > 5000:  # 최소 거래 가치 조건 확인
+            if coin_balance > 0:  # 보유한 코인이 있는지 확인
                 response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
-                print(f"Sell order executed: {response}")
+                print(f"Sell order executed for {coin}: {response}")
     except Exception as e:
-        print(f"Error executing trade: {e}")
+        print(f"Error executing trade for {coin}: {e}")
 
 def main():
     print(f"{datetime.now()} - Running main function.")
-    total_assets = get_total_assets()  # 총 자산 계산
-    for coin in ["BTC", "BORA"]:
+    for coin in ["BTC", "BORA"]:  # 코인 이름을 "BORA"로 수정
         df = fetch_data(coin)
         decision, decision_reason = decide_action(df, coin)
-        execute_trade(decision, decision_reason, coin, total_assets)
+        execute_trade(decision, decision_reason, coin)
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
@@ -94,4 +91,3 @@ if __name__ == "__main__":
     while True:
         schedule.run_pending()
         time.sleep(1)
-                     
