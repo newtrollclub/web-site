@@ -13,6 +13,30 @@ access_key = os.getenv("UPBIT_ACCESS_KEY")
 secret_key = os.getenv("UPBIT_SECRET_KEY")
 upbit = pyupbit.Upbit(access_key, secret_key)
 
+# 선택된 코인을 저장할 전역 변수
+selected_coins = []
+
+def get_top_return_coins(n=2):
+    tickers = pyupbit.get_tickers(fiat="KRW")
+    returns = []
+    for ticker in tickers:
+        try:
+            ohlcv = pyupbit.get_ohlcv(ticker, interval="day", count=7)
+            if ohlcv is not None and len(ohlcv) >= 7:
+                weekly_return = (ohlcv['close'].iloc[-1] - ohlcv['close'].iloc[0]) / ohlcv['close'].iloc[0]
+                returns.append((ticker, weekly_return))
+        except Exception as e:
+            print(f"Error fetching data for {ticker}: {e}")
+    sorted_returns = sorted(returns, key=lambda x: x[1], reverse=True)
+    return [ticker for ticker, _ in sorted_returns[:n]]
+
+def select_coins():
+    global selected_coins
+    selected_coins = get_top_return_coins(2)
+    print(f"Selected coins: {selected_coins}", datetime.now())
+    # 여기에 추가 로그
+    print(f"After selecting coins: {selected_coins}")
+
 def get_total_assets():
     """사용자의 총 자산을 계산합니다."""
     total_assets = 0
@@ -28,12 +52,20 @@ def get_total_assets():
 
 def fetch_data(coin):
     """10분 간격 데이터를 받아와서 기술적 지표를 계산합니다."""
-    df = pyupbit.get_ohlcv(f"KRW-{coin}", interval="minute10", count=120)
-    df['SMA_20'] = ta.sma(df['close'], length=20)
-    df['SMA_60'] = ta.sma(df['close'], length=60)
-    df['SMA_120'] = ta.sma(df['close'], length=120)
-    df['Volume_MA'] = ta.sma(df['volume'], length=20)
-    return df
+    try:
+        df = pyupbit.get_ohlcv(f"KRW-{coin}", interval="minute10", count=120)
+        if df is None:
+            print(f"No data returned for {coin}")
+            return pd.DataFrame()  # 빈 데이터 프레임 반환
+
+        df['SMA_20'] = ta.sma(df['close'], length=20)
+        df['SMA_60'] = ta.sma(df['close'], length=60)
+        df['SMA_120'] = ta.sma(df['close'], length=120)
+        df['Volume_MA'] = ta.sma(df['volume'], length=20)
+        return df
+    except Exception as e:
+        print(f"Error fetching data for {coin}: {e}")
+        return pd.DataFrame()  # 예외 발생 시 빈 데이터 프레임 반환
 
 def decide_action(df, coin):
     """매수, 매도, 보유 결정을 내립니다."""
@@ -59,18 +91,10 @@ def execute_trade(decision, decision_reason, coin):
     """매수 또는 매도 결정을 실행합니다."""
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
     try:
-        if decision == "buy":
+        if decision == "buy" and coin in selected_coins:
             total_assets = get_total_assets()
             krw_balance = upbit.get_balance("KRW")  # 사용 가능한 KRW 잔액
-            coin_balance = upbit.get_balance(coin)  # 해당 코인의 현재 보유량
-            current_price = pyupbit.get_current_price(f"KRW-{coin}")  # 해당 코인의 현재 가격
-
-            # 이미 보유한 코인의 가치 계산
-            coin_value = coin_balance * current_price if coin_balance else 0
-
-            # 추가로 매수 가능한 최대 금액 계산
-            max_additional_buy = total_assets / 2 - coin_value
-            investment_amount = min(krw_balance, max_additional_buy)
+            investment_amount = min(krw_balance, total_assets / 2)
 
             if investment_amount > 5000:  # 최소 거래 금액 조건 확인
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
@@ -83,19 +107,28 @@ def execute_trade(decision, decision_reason, coin):
     except Exception as e:
         print(f"Error executing trade for {coin}: {e}")
 
-
 def main():
     print(f"{datetime.now()} - Running main function.")
-    for coin in ["BTC", "BORA"]:  # 코인 이름을 "BORA"로 수정
+    if not selected_coins:
+        print("No coins selected yet. Skipping trade execution.")
+        return
+    for coin in selected_coins:
+        print(f"Deciding action for {coin}")
         df = fetch_data(coin)
+        if df.empty:
+            print(f"No data returned for {coin}")
+            continue
         decision, decision_reason = decide_action(df, coin)
+        print(f"Decision: {decision}, Reason: {decision_reason}")
         execute_trade(decision, decision_reason, coin)
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
+schedule.every().day.at("00:00").do(select_coins)
 
 if __name__ == "__main__":
-    main()  # 최초 실행
+    select_coins()  # 최초 실행 시 코인 선택
+    main()  # 최초 실행 시에도 매수/매도 결정 및 실행
     while True:
         schedule.run_pending()
         time.sleep(1)
