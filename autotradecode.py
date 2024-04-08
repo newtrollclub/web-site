@@ -29,27 +29,44 @@ def calculate_profit_loss(df):
     profit_loss = (current_price - highest_price) / highest_price
     return profit_loss
 
-def decide_action(df, coin):
+def calculate_highest_profit(df):
+    """코인의 최고 수익률을 계산합니다."""
+    highest_price = df['close'].max()
+    buy_price = df.iloc[0]['open']  # 처음 매수한 가격
+    highest_profit = (highest_price - buy_price) / buy_price
+    return highest_profit
+
+def decide_action(df, coin, highest_profit):
     """매수, 매도, 보유 결정을 내립니다."""
     last_row = df.iloc[-1]
-    rsi = last_row['RSI']
-    profit_loss = calculate_profit_loss(df)
+    current_price = last_row['close']
+    
+    # 현재 수익률 계산
+    buy_price = df.iloc[0]['open']  # 처음 매수한 가격
+    current_profit = (current_price - buy_price) / buy_price
+    
+    # 최고 수익률 대비 현재 수익률의 하락 비율 계산
+    profit_loss = (highest_profit - current_profit) / highest_profit
 
-    if rsi <= 30:
+    # RSI 값 계산
+    rsi_value = ta.rsi(df['close'], length=14).iloc[-1]
+
+    # 매수 조건: RSI 30 이하
+    if rsi_value <= 30:
         decision = "buy"
-        decision_reason = f"{coin}: RSI가 30 이하입니다."
-    elif rsi >= 70:
-        decision = "sell"
-        decision_reason = f"{coin}: RSI가 70 이상입니다."
-    elif profit_loss <= -0.01:
-        decision = "sell"
-        decision_reason = f"{coin}: 수익률이 -1% 이하입니다."
-    elif profit_loss >= 0.01:
-        decision = "sell"
-        decision_reason = f"{coin}: 수익률이 1% 이상입니다."
+        decision_reason = f"{coin}: RSI가 30 이하이므로 매수합니다."
     else:
-        decision = "hold"
-        decision_reason = f"{coin}: 매수 또는 매도 조건에 해당하지 않습니다."
+        # 매도 조건: 수익률이 1% 이상이고, 최고 수익률 대비 -1% 이상 하락하거나 RSI가 70 이상
+        if current_profit >= 0.01:  
+            if profit_loss >= 0.01 or rsi_value >= 70:
+                decision = "sell"
+                decision_reason = f"{coin}: 최고 수익률 대비 -1% 이상 하락하거나 RSI가 70 이상이므로 매도합니다."
+            else:
+                decision = "hold"
+                decision_reason = f"{coin}: 수익률이 1% 이상이지만 매도 조건을 만족하지 않아 보유합니다."
+        else:
+            decision = "hold"
+            decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
 
     return decision, decision_reason
 
@@ -70,7 +87,8 @@ def main():
     print(f"{datetime.now()} - Running main function.")
     for coin in ["BTC", "BORA"]:
         df = fetch_data(coin)
-        decision, decision_reason = decide_action(df, coin)
+        highest_profit = calculate_highest_profit(df)
+        decision, decision_reason = decide_action(df, coin, highest_profit)
         execute_trade(decision, decision_reason, coin)
 
 # 스케줄 설정 및 실행
