@@ -70,7 +70,7 @@ def decide_action(df, coin, highest_profit):
 
     return decision, decision_reason
 
-def execute_trade(decision, decision_reason, coin, total_assets):
+def execute_trade(decision, decision_reason, coin, total_assets, current_profit, highest_profit):
     """매수 또는 매도 결정을 실행합니다."""
     print(f"{datetime.now()} - Decision: {decision}, Reason: {decision_reason}")
     try:
@@ -88,10 +88,12 @@ def execute_trade(decision, decision_reason, coin, total_assets):
         elif decision == "sell":
             coin_balance = float(upbit.get_balance(coin))
             if coin_balance > 0:  # 보유한 코인이 있는지 확인
-                response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
-                print(f"Sell order executed for {coin}: {response}")
+                if current_profit <= -0.01 or (current_profit >= 0.01 and current_profit <= 0 and current_profit <= highest_profit - 0.01):
+                    response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
+                    print(f"Sell order executed for {coin}: {response}")
     except Exception as e:
         print(f"Error executing trade for {coin}: {e}")
+
 
 def main():
     print(f"{datetime.now()} - Running main function.")
