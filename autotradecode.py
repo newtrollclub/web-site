@@ -95,8 +95,9 @@ def main():
         df = fetch_data(coin)
         highest_profit = calculate_highest_profit(df)
         total_assets = calculate_total_assets()
+        current_profit = calculate_profit_loss(df)
         decision, decision_reason = decide_action(df, coin, highest_profit)
-        execute_trade(decision, decision_reason, coin, total_assets)
+        execute_trade(decision, decision_reason, coin, total_assets, current_profit, highest_profit)
 
 def calculate_total_assets():
     """총 자산을 계산합니다."""
