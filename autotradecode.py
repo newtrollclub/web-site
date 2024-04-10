@@ -56,14 +56,10 @@ def decide_action(df, coin, highest_profit):
         decision = "buy"
         decision_reason = f"{coin}: RSI가 30 이하이므로 매수합니다."
     else:
-        # 매도 조건: 수익률이 1% 이상이고, 최고 수익률 대비 -1% 이상 하락하거나 RSI가 70 이상
-        if current_profit >= 0.01:  
-            if profit_loss >= 0.01 or rsi_value >= 70:
-                decision = "sell"
-                decision_reason = f"{coin}: 최고 수익률 대비 -1% 이상 하락하거나 RSI가 70 이상이므로 매도합니다."
-            else:
-                decision = "hold"
-                decision_reason = f"{coin}: 수익률이 1% 이상이지만 매도 조건을 만족하지 않아 보유합니다."
+        # 매도 조건: 최고 수익률 대비 -1% 이상 하락
+        if profit_loss <= -0.01:
+            decision = "sell"
+            decision_reason = f"{coin}: 최고 수익률 대비 -1% 이상 하락하였으므로 매도합니다."
         else:
             decision = "hold"
             decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
@@ -88,12 +84,10 @@ def execute_trade(decision, decision_reason, coin, total_assets, current_profit,
         elif decision == "sell":
             coin_balance = float(upbit.get_balance(coin))
             if coin_balance > 0:  # 보유한 코인이 있는지 확인
-                if current_profit <= -0.01 or (current_profit >= 0.01 and current_profit <= 0 and current_profit <= highest_profit - 0.01):
-                    response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
-                    print(f"Sell order executed for {coin}: {response}")
+                response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
+                print(f"Sell order executed for {coin}: {response}")
     except Exception as e:
         print(f"Error executing trade for {coin}: {e}")
-
 
 def main():
     print(f"{datetime.now()} - Running main function.")
