@@ -91,7 +91,7 @@ def execute_trade(decision, decision_reason, coin, total_assets, current_profit,
 
 def main():
     print(f"{datetime.now()} - Running main function.")
-    for coin in ["BTC", "BORA"]:
+    for coin in ["BTC", "BORA","SOL","ETH","DOGE"]:
         df = fetch_data(coin)
         highest_profit = calculate_highest_profit(df)
         total_assets = calculate_total_assets()
