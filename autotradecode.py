@@ -103,12 +103,13 @@ def calculate_total_assets():
     """총 자산을 계산합니다."""
     krw_balance = upbit.get_balance("KRW")  # 사용 가능한 KRW 잔액
     total_assets = krw_balance
-    for coin in ["BTC", "BORA"]:
+    for coin in ["BTC", "BORA", "SOL", "ETH", "DOGE"]:
         coin_balance = float(upbit.get_balance(coin))
         current_price = pyupbit.get_current_price(f"KRW-{coin}")  # 해당 코인의 현재 가격
         coin_value = coin_balance * current_price if coin_balance else 0
         total_assets += coin_value
     return total_assets
+
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
