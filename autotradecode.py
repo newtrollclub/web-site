@@ -91,7 +91,7 @@ def execute_trade(decision, decision_reason, coin, total_assets, current_profit,
 
 def main():
     print(f"{datetime.now()} - Running main function.")
-    for coin in ["BTC", "BORA","SOL","ETH","DOGE"]:
+    for coin in ["BTC", "BORA", "SOL", "ETH", "DOGE"]:
         df = fetch_data(coin)
         highest_profit = calculate_highest_profit(df)
         total_assets = calculate_total_assets()
@@ -109,7 +109,6 @@ def calculate_total_assets():
         coin_value = coin_balance * current_price if coin_balance else 0
         total_assets += coin_value
     return total_assets
-
 
 # 스케줄 설정 및 실행
 schedule.every(10).minutes.do(main)
