@@ -37,21 +37,14 @@ def calculate_highest_profit(df):
     return highest_profit
 
 def decide_action(df, coin, highest_profit):
-    """매수, 매도, 보유 결정을 내립니다."""
     last_row = df.iloc[-1]
     current_price = last_row['close']
-    
-    # 현재 수익률 계산
-    buy_price = df.iloc[0]['open']  # 처음 매수한 가격
+    buy_price = df.iloc[0]['open']
     current_profit = (current_price - buy_price) / buy_price
-    
-    # 최고 수익률 대비 현재 수익률의 하락 비율 계산
-    profit_loss = (highest_profit - current_profit) / highest_profit
+    profit_loss = (current_profit - highest_profit)
 
-    # RSI 값 계산
     rsi_value = ta.rsi(df['close'], length=14).iloc[-1]
 
-    # 매수 조건: RSI 30 이하에서 수치가 올라갈 때
     if rsi_value <= 30:
         rsi_previous = ta.rsi(df['close'], length=14).shift(1).iloc[-1]
         if rsi_value > rsi_previous:
@@ -61,23 +54,20 @@ def decide_action(df, coin, highest_profit):
             decision = "hold"
             decision_reason = f"{coin}: RSI가 30 이하이지만 이전 RSI보다 증가하지 않아 보유합니다."
     else:
-        # 매도 조건: 최고 수익률 대비 -1% 이상 하락
-        if current_profit <= 0.03:
-            if profit_loss <= -0.01:
-                decision = "sell"
-                decision_reason = f"{coin}: 최고 수익률 대비 -1% 이상 하락하였으므로 매도합니다."
-            else:
-                decision = "hold"
-                decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
+        # 최고 수익률 대비 현재 수익률이 1% 이상 감소한 경우
+        if profit_loss <= -0.01:
+            decision = "sell"
+            decision_reason = f"{coin}: 최고 수익률 대비 현재 수익률이 -1% 이상 하락하였으므로 매도합니다."
+        # 최고 수익률이 3% 이상이고, 현재 수익률이 최고 수익률의 70% 미만으로 하락한 경우
+        elif highest_profit > 0.03 and (current_profit / highest_profit) <= 0.70:
+            decision = "sell"
+            decision_reason = f"{coin}: 최고 수익률이 3% 이상이고 현재 수익률이 최고 수익률의 70% 미만으로 하락하였으므로 매도합니다."
         else:
-            if profit_loss <= -(highest_profit / 3):
-                decision = "sell"
-                decision_reason = f"{coin}: 최고 수익률에 1/3 이상 하락하였으므로 매도합니다."
-            else:
-                decision = "hold"
-                decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
+            decision = "hold"
+            decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
 
     return decision, decision_reason
+
 
 def execute_trade(decision, decision_reason, coin, total_assets, current_profit, highest_profit):
     """매수 또는 매도 결정을 실행합니다."""
