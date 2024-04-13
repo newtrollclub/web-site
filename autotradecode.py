@@ -51,19 +51,31 @@ def decide_action(df, coin, highest_profit):
     # RSI 값 계산
     rsi_value = ta.rsi(df['close'], length=14).iloc[-1]
 
-    # 매수 조건: RSI 30 이하
+    # 매수 조건: RSI 30 이하에서 수치가 올라갈 때
     if rsi_value <= 30:
-        # 이전 RSI와 현재 RSI를 비교하여 증가했는지 확인
         rsi_previous = ta.rsi(df['close'], length=14).shift(1).iloc[-1]
         if rsi_value > rsi_previous:
             decision = "buy"
-            decision_reason = f"{coin}: RSI가 30 이하이고, 이전 RSI보다 증가하였으므로 매수합니다."
+            decision_reason = f"{coin}: RSI가 30 이하이고 이전 RSI보다 증가하므로 매수합니다."
         else:
             decision = "hold"
-            decision_reason = f"{coin}: RSI가 30 이하이지만, 이전 RSI보다 증가하지 않아 보유합니다."
+            decision_reason = f"{coin}: RSI가 30 이하이지만 이전 RSI보다 증가하지 않아 보유합니다."
     else:
-        decision = "hold"
-        decision_reason = f"{coin}: RSI가 30 이하가 아니므로 보유합니다."
+        # 매도 조건: 최고 수익률 대비 -1% 이상 하락
+        if current_profit <= 0.03:
+            if profit_loss <= -0.01:
+                decision = "sell"
+                decision_reason = f"{coin}: 최고 수익률 대비 -1% 이상 하락하였으므로 매도합니다."
+            else:
+                decision = "hold"
+                decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
+        else:
+            if profit_loss <= -(highest_profit / 3):
+                decision = "sell"
+                decision_reason = f"{coin}: 최고 수익률에 1/3 이상 하락하였으므로 매도합니다."
+            else:
+                decision = "hold"
+                decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
 
     return decision, decision_reason
 
@@ -83,12 +95,10 @@ def execute_trade(decision, decision_reason, coin, total_assets, current_profit,
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
                 print(f"Buy order executed for {coin}: {response}")
         elif decision == "sell":
-            # 매도 조건: 최고 수익률 대비 -1% 이상 하락
-            if profit_loss <= -0.01:
-                coin_balance = float(upbit.get_balance(coin))
-                if coin_balance > 0:  # 보유한 코인이 있는지 확인
-                    response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
-                    print(f"Sell order executed for {coin}: {response}")
+            coin_balance = float(upbit.get_balance(coin))
+            if coin_balance > 0:  # 보유한 코인이 있는지 확인
+                response = upbit.sell_market_order(f"KRW-{coin}", coin_balance)
+                print(f"Sell order executed for {coin}: {response}")
     except Exception as e:
         print(f"Error executing trade for {coin}: {e}")
 
