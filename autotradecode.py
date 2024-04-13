@@ -37,28 +37,24 @@ def calculate_highest_profit(df):
     return highest_profit
 
 def decide_action(df, coin, highest_profit):
+    """매수, 매도, 보유 결정을 내립니다."""
     last_row = df.iloc[-1]
     current_price = last_row['close']
     buy_price = df.iloc[0]['open']
     current_profit = (current_price - buy_price) / buy_price
-    profit_loss = (current_profit - highest_profit)
-
+    profit_loss = (current_profit - highest_profit) / highest_profit
     rsi_value = ta.rsi(df['close'], length=14).iloc[-1]
+    rsi_previous = ta.rsi(df['close'], length=14).shift(1).iloc[-1]
 
-    if rsi_value <= 30:
-        rsi_previous = ta.rsi(df['close'], length=14).shift(1).iloc[-1]
-        if rsi_value > rsi_previous:
-            decision = "buy"
-            decision_reason = f"{coin}: RSI가 30 이하이고 이전 RSI보다 증가하므로 매수합니다."
-        else:
-            decision = "hold"
-            decision_reason = f"{coin}: RSI가 30 이하이지만 이전 RSI보다 증가하지 않아 보유합니다."
+    # RSI가 30 이하이고 이전 값보다 증가하거나, RSI가 30 이하에서 30 이상으로 증가한 경우 매수
+    if (rsi_value <= 30 and rsi_value > rsi_previous) or (rsi_previous <= 30 and rsi_value > 30 and rsi_value > rsi_previous):
+        decision = "buy"
+        decision_reason = f"{coin}: RSI가 30 이하에서 증가하였거나 30 이하에서 30 이상으로 증가하였으므로 매수합니다."
     else:
-        # 최고 수익률 대비 현재 수익률이 1% 이상 감소한 경우
+        # 매도 조건
         if profit_loss <= -0.01:
             decision = "sell"
             decision_reason = f"{coin}: 최고 수익률 대비 현재 수익률이 -1% 이상 하락하였으므로 매도합니다."
-        # 최고 수익률이 3% 이상이고, 현재 수익률이 최고 수익률의 70% 미만으로 하락한 경우
         elif highest_profit > 0.03 and (current_profit / highest_profit) <= 0.70:
             decision = "sell"
             decision_reason = f"{coin}: 최고 수익률이 3% 이상이고 현재 수익률이 최고 수익률의 70% 미만으로 하락하였으므로 매도합니다."
@@ -67,6 +63,7 @@ def decide_action(df, coin, highest_profit):
             decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
 
     return decision, decision_reason
+
 
 
 def execute_trade(decision, decision_reason, coin, total_assets, current_profit, highest_profit):
