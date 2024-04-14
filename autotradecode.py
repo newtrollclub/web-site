@@ -51,13 +51,14 @@ def decide_action(df, coin, highest_profit):
         decision = "buy"
         decision_reason = f"{coin}: RSI가 30 이하에서 증가하였거나 30 이하에서 30 이상으로 증가하였으므로 매수합니다."
     else:
-        # 매도 조건
-        if profit_loss <= -0.01:
+        # 매도 조건: 최고 수익률이 3% 이하일 때 현재 수익률이 최고 수익률 대비 1% 포인트 하락했을 때
+        if highest_profit <= 0.03 and current_profit <= highest_profit - 0.01:
             decision = "sell"
-            decision_reason = f"{coin}: 최고 수익률 대비 현재 수익률이 -1% 이상 하락하였으므로 매도합니다."
-        elif highest_profit > 0.03 and (current_profit / highest_profit) <= 0.70:
+            decision_reason = f"{coin}: 최고 수익률이 3% 이하이고 현재 수익률이 최고 수익률 대비 1% 포인트 하락하였으므로 매도합니다."
+        # 매도 조건: 최고 수익률이 3% 이상이고, 현재 수익률이 최고 수익률의 70% 이하로 떨어졌을 때
+        elif highest_profit > 0.03 and current_profit <= highest_profit * 0.70:
             decision = "sell"
-            decision_reason = f"{coin}: 최고 수익률이 3% 이상이고 현재 수익률이 최고 수익률의 70% 미만으로 하락하였으므로 매도합니다."
+            decision_reason = f"{coin}: 최고 수익률이 3% 이상이었고 현재 수익률이 최고 수익률의 70% 이하로 하락하였으므로 매도합니다."
         else:
             decision = "hold"
             decision_reason = f"{coin}: 매도 조건을 만족하지 않아 보유합니다."
