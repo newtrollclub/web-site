@@ -15,7 +15,7 @@ upbit = pyupbit.Upbit(access_key, secret_key)
 
 def fetch_data(coin):
     """10분 간격 데이터를 받아와서 기술적 지표를 계산합니다."""
-    df = pyupbit.get_ohlcv(f"KRW-{coin}", interval="minute10", count=120)
+    df = pyupbit.get_ohlcv(f"KRW-{coin}", interval="minute5", count=120)
     # 최고가 기록
     df['High'] = df['close'].rolling(window=10).max()
     # RSI 계산
