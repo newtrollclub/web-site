@@ -72,7 +72,8 @@ def execute_trade(decision, decision_reason, coin):
                 investment_amount = min(max_additional_buy, krw_balance)
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
                 print(f"Buy order executed for {coin}: {response}")
-                bought_prices[coin] = current_price  # 매수한 가격 기록
+                # 매수가 성공했을 때만 매수한 가격을 기록
+                bought_prices[coin] = current_price
         elif decision == "sell":
             coin_balance = float(upbit.get_balance(coin))
             if coin_balance > 0:  # 보유한 코인이 있는지 확인
