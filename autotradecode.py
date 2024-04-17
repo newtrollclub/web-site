@@ -51,7 +51,7 @@ def decide_action(df, coin):
     if (rsi_value <= 30 and rsi_value > rsi_previous) or (rsi_previous <= 30 and rsi_value > 30 and rsi_value > rsi_previous):
         return "buy", f"{coin}: RSI가 30 이하에서 증가하였거나 30 이하에서 30 이상으로 증가하였으므로 매수합니다."
     else:
-        # 매수 이후 최고 수익률이 3% 이상이면서 현재 수익률이 최고 수익률의 70% 이하로 떨어졌을 때 매도
+        # 매수 이후 최고 수익률이 3% 이하이고 현재 수익률이 최고 수익률 대비 1% 포인트 하락하였으므로 매도
         if highest_profit <= 0.03 and current_profit <= highest_profit - 0.01:
             return "sell", f"{coin}: 최고 수익률이 3% 이하이고 현재 수익률이 최고 수익률 대비 1% 포인트 하락하였으므로 매도합니다."
         # 매도 조건: 최고 수익률이 3% 이상이고, 현재 수익률이 최고 수익률의 70% 이하로 떨어졌을 때
