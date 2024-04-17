@@ -28,16 +28,16 @@ def calculate_profit_loss(coin):
     """수익률을 계산합니다."""
     df = fetch_data(coin)
     current_price = df.iloc[-1]['close']
-    bought_price = bought_prices.get(coin)
-    if bought_price is None:
-        return None
+    bought_price = bought_prices.get(coin, 0)  # 수정된 부분: 매수 가격이 없는 경우 기본값으로 0을 사용
+    if bought_price == 0:  # 수정된 부분: 매수 가격이 0인 경우 현재 수익률을 0으로 반환
+        return 0
     profit_loss = (current_price - bought_price) / bought_price
     return profit_loss
 
 def decide_action(df, coin):
     """매수, 매도, 보유 결정을 내립니다."""
     current_profit = calculate_profit_loss(coin)
-    highest_profit = highest_profits.get(coin)
+    highest_profit = highest_profits.get(coin, 0)  # 수정된 부분: 최고 수익률이 없는 경우 기본값으로 0을 사용
 
     if current_profit is None or highest_profit is None:
         # 매수 이후 데이터가 없는 경우 또는 최고 수익률이 없는 경우
@@ -72,8 +72,7 @@ def execute_trade(decision, decision_reason, coin):
                 investment_amount = min(max_additional_buy, krw_balance)
                 response = upbit.buy_market_order(f"KRW-{coin}", investment_amount * 0.9995)  # 수수료 고려
                 print(f"Buy order executed for {coin}: {response}")
-                # 매수가 성공했을 때만 매수한 가격을 기록
-                bought_prices[coin] = current_price
+                bought_prices[coin] = current_price  # 매수한 가격 기록
         elif decision == "sell":
             coin_balance = float(upbit.get_balance(coin))
             if coin_balance > 0:  # 보유한 코인이 있는지 확인
@@ -95,9 +94,9 @@ def calculate_highest_profit(coin):
     """코인의 최고 수익률을 계산하고 기록합니다."""
     df = fetch_data(coin)
     highest_price = df['close'].max()
-    bought_price = bought_prices.get(coin)
-    if bought_price is None:
-        return None
+    bought_price = bought_prices.get(coin, 0)  # 수정된 부분: 매수 가격이 없는 경우 기본값으로 0을 사용
+    if bought_price == 0:  # 수정된 부분: 매수 가격이 0인 경우 현재 수익률을 0으로 반환
+        return 0
     highest_profit = (highest_price - bought_price) / bought_price
     highest_profits[coin] = highest_profit
     return highest_profit
